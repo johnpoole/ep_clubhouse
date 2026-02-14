@@ -1,0 +1,10 @@
+[Unit]
+Description=Yarbo Bridge Code Update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/yarbo-bridge/pi/update.sh
+StandardOutput=journal
+StandardError=journal

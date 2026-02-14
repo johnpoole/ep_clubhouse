@@ -1,0 +1,22 @@
+[Unit]
+Description=Yarbo Bridge for Home Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/yarbo-bridge
+ExecStart=/opt/yarbo-bridge/.venv/bin/python yarbo_bridge.py
+EnvironmentFile=/opt/yarbo-bridge/.env
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/yarbo-bridge
+
+[Install]
+WantedBy=multi-user.target
