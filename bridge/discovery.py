@@ -1,13 +1,18 @@
 """
-Dynamic robot IP discovery for Yarbo Bridge.
+Dynamic data center IP discovery for Yarbo Bridge.
+
+The Yarbo Data Center (docking station) runs EMQX on port 8883 (TLS)
+and connects to the home network via ethernet (e.g. 192.168.68.102).
+The robot itself connects to the data center over WiFi (e.g. 192.168.68.105).
+We connect to the DATA CENTER broker, not the robot directly.
 
 Strategies (in order):
   1. Try the configured/cached IP — fast TLS handshake on port 8883
   2. Scan the local subnet for hosts with port 8883 open (EMQX broker)
   3. After connecting, confirm via `get_connect_wifi_name` MQTT command
 
-The robot runs EMQX on port 8883 (TLS) — this is unusual enough that
-a subnet scan reliably identifies it.
+Port 8883 TLS is unusual enough on a home network that a subnet scan
+reliably identifies the data center.
 """
 
 import socket
@@ -21,7 +26,7 @@ from pathlib import Path
 
 log = logging.getLogger("yarbo-bridge.discovery")
 
-# File to persist the last-known good IP across restarts
+# File to persist the last-known good data center IP across restarts
 _CACHE_FILE = Path(__file__).parent.parent / ".robot_ip_cache"
 
 # How long to wait for a TLS handshake (seconds)
@@ -103,7 +108,7 @@ def _scan_subnet(subnet: str, port: int = 8883,
 
 
 def load_cached_ip() -> Optional[str]:
-    """Load the last-known-good robot IP from disk cache."""
+    """Load the last-known-good data center IP from disk cache."""
     try:
         if _CACHE_FILE.exists():
             ip = _CACHE_FILE.read_text().strip()
@@ -115,19 +120,22 @@ def load_cached_ip() -> Optional[str]:
 
 
 def save_cached_ip(ip: str):
-    """Persist a known-good robot IP to disk."""
+    """Persist a known-good data center IP to disk."""
     try:
         _CACHE_FILE.write_text(ip)
-        log.info("Cached robot IP: %s → %s", ip, _CACHE_FILE)
+        log.info("Cached data center IP: %s → %s", ip, _CACHE_FILE)
     except Exception as e:
-        log.warning("Failed to cache robot IP: %s", e)
+        log.warning("Failed to cache data center IP: %s", e)
 
 
 def discover_robot(configured_ip: str = "",
                    port: int = 8883,
                    subnet: str = None) -> Optional[str]:
     """
-    Find the robot's IP address.
+    Find the Yarbo Data Center's IP address (where the MQTT broker runs).
+
+    Note: The data center (docking station) runs EMQX on ethernet.
+    The robot itself is a separate device on WiFi — we don't connect to it.
 
     Order of attempts:
       1. configured_ip (from env/config) — probe it
@@ -166,7 +174,7 @@ def discover_robot(configured_ip: str = "",
     elapsed = time.time() - t0
 
     if found:
-        log.info("✓ Found robot at %s (scan took %.1fs)", found, elapsed)
+        log.info("✓ Found data center at %s (scan took %.1fs)", found, elapsed)
         save_cached_ip(found)
         return found
 

@@ -16,8 +16,8 @@ except ImportError:
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 CONFIG = {
-    "email": os.environ.get("YARBO_EMAIL", "jdpoole@gmail.com"),
-    "password": os.environ.get("YARBO_PASSWORD", "Finn&3409"),
+    "email": os.environ.get("YARBO_EMAIL", ""),
+    "password": os.environ.get("YARBO_PASSWORD", ""),
     "bridge_port": int(os.environ.get("YARBO_BRIDGE_PORT", "8099")),
     "bridge_host": os.environ.get("YARBO_BRIDGE_HOST", "0.0.0.0"),
 
@@ -29,8 +29,7 @@ CONFIG = {
     # Pre-loaded tokens from app backup (used as fallback / initial token)
     # These tokens were extracted from FlutterSharedPreferences.xml
     "initial_access_token": os.environ.get("YARBO_ACCESS_TOKEN", ""),
-    "initial_refresh_token": os.environ.get("YARBO_REFRESH_TOKEN",
-        "v1.McqVkIx5sr-UbZ6zM5I2aSbsmIrHZSYQhf52PEtG9BVSTpOjUXsbd1egDmGgiQZWG5c2FY2YcwFBUQaXIDiNtZ0"),
+    "initial_refresh_token": os.environ.get("YARBO_REFRESH_TOKEN", ""),
 
     # Yarbo API
     "api_base": "https://4zx17x5q7l.execute-api.us-east-1.amazonaws.com/Stage",
@@ -40,13 +39,14 @@ CONFIG = {
     "mqtt_broker": "t9db1d91.us-east-1.emqx.cloud",
     "mqtt_port": 15525,
 
-    # MQTT — Robot local broker (no auth required!)
-    # The robot runs its own EMQX broker on port 8883 (TLS) or 1883 (plain).
-    # Connect robot to WiFi first, then set YARBO_ROBOT_IP to its local IP.
+    # MQTT — Data Center local broker (no auth required!)
+    # The Yarbo Data Center (docking station) runs EMQX on port 8883 (TLS).
+    # It connects via ethernet. The robot connects to it over WiFi.
+    # YARBO_ROBOT_IP should point to the data center, NOT the robot itself.
     "robot_ip": os.environ.get("YARBO_ROBOT_IP", "192.168.68.102"),
     "robot_mqtt_port": int(os.environ.get("YARBO_ROBOT_MQTT_PORT", "8883")),
     "robot_mqtt_tls": os.environ.get("YARBO_ROBOT_MQTT_TLS", "true").lower() == "true",
-    "robot_serial": os.environ.get("YARBO_ROBOT_SERIAL", "25210102S63YI872"),
+    "robot_serial": os.environ.get("YARBO_ROBOT_SERIAL", ""),
 
     # Cache TTL (seconds) - how often to re-fetch from cloud
     "cache_ttl_device": 300,      # 5 min

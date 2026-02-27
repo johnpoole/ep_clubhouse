@@ -1194,6 +1194,141 @@ def register_routes(app, api, mqtt_ref: list, cache):
 </html>"""
         return HTMLResponse(content=html)
 
+    # ── Work History ─────────────────────────────────────────────────
+
+    @app.get("/api/history", response_class=HTMLResponse)
+    def get_history(sn: str = None, limit: int = 200):
+        """Render a full-page work history timeline (plan events from cloud messages)."""
+        from datetime import datetime as _dt
+        msgs = api.get_messages(_sn(sn))
+        events = [enrich_plan_event(m) for m in msgs if is_plan_event(m)][:limit]
+
+        # Count completions and find last completed date
+        completions = sum(1 for e in events if e["category"] == "completed")
+        last_completed = next((e for e in events if e["category"] == "completed"), None)
+        last_completed_str = ""
+        if last_completed and last_completed.get("timestamp"):
+            last_completed_str = _dt.fromtimestamp(last_completed["timestamp"]).strftime("%-d %b %Y")
+
+        # Group events by local date
+        from collections import OrderedDict
+        by_day: "OrderedDict[str, list]" = OrderedDict()
+        for ev in events:
+            ts = ev.get("timestamp")
+            if ts:
+                day_key = _dt.fromtimestamp(ts).strftime("%A, %B %-d, %Y")
+            else:
+                day_key = "Unknown date"
+            by_day.setdefault(day_key, []).append(ev)
+
+        # Category → colour + dot colour
+        CAT_COLOR = {
+            "completed": "#4caf50",
+            "started":   "#2196f3",
+            "paused":    "#ff9800",
+            "info":      "#ff9800",
+            "error":     "#f44336",
+        }
+
+        # Build event rows HTML
+        day_html_parts = []
+        for day_label, day_events in by_day.items():
+            rows = []
+            for ev in day_events:
+                ts = ev.get("timestamp")
+                time_str = _dt.fromtimestamp(ts).strftime("%H:%M") if ts else "--:--"
+                color = CAT_COLOR.get(ev["category"], "#9e9e9e")
+                code = ev.get("code", "")
+                desc = ev.get("description", ev.get("title", ""))
+                rows.append(
+                    f'<div class="event-row">'
+                    f'  <div class="event-time">{time_str}</div>'
+                    f'  <div class="event-dot" style="background:{color}"></div>'
+                    f'  <div class="event-desc">{desc}</div>'
+                    f'  <div class="event-code" style="color:{color}">{code}</div>'
+                    f'</div>'
+                )
+            rows_html = "\n".join(rows)
+            day_html_parts.append(
+                f'<div class="day-label">{day_label}</div>'
+                f'<div class="ha-card">{rows_html}</div>'
+            )
+
+        timeline_html = "\n".join(day_html_parts) if day_html_parts else (
+            '<p style="color:var(--secondary-text);text-align:center;padding:32px 0">'
+            'No plan history available yet.</p>'
+        )
+
+        summary_html = ""
+        if completions:
+            summary_html = (
+                f'<div class="summary-bar">'
+                f'  <span>{completions} session{"s" if completions != 1 else ""} completed</span>'
+                + (f'  <span>Last: {last_completed_str}</span>' if last_completed_str else "")
+                + f'</div>'
+            )
+
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="300">
+  <title>Yarbo Work History</title>
+  <style>
+    :root {{
+      --background: #f0f0f5; --card-bg: #fff;
+      --primary-text: #212121; --secondary-text: #727272;
+      --divider: rgba(0,0,0,.06);
+      --card-radius: 12px; --card-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }}
+    @media (prefers-color-scheme: dark) {{
+      :root {{
+        --background: #1b1b1f; --card-bg: #2c2c30;
+        --primary-text: #e3e3e8; --secondary-text: #9e9ea6;
+        --divider: rgba(255,255,255,.08); --card-shadow: 0 1px 4px rgba(0,0,0,.4);
+      }}
+    }}
+    * {{ margin:0; padding:0; box-sizing:border-box; }}
+    body {{
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--background); color: var(--primary-text);
+      padding: 12px; max-width: 680px; margin: 0 auto;
+    }}
+    h1 {{ font-size: 20px; font-weight: 500; margin: 8px 0 12px; }}
+    .summary-bar {{
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--secondary-text);
+      padding: 0 4px 12px;
+    }}
+    .day-label {{
+      font-size: 12px; font-weight: 500; color: var(--secondary-text);
+      text-transform: uppercase; letter-spacing: .05em;
+      padding: 16px 4px 6px;
+    }}
+    .ha-card {{
+      background: var(--card-bg); border-radius: 12px;
+      box-shadow: var(--card-shadow); overflow: hidden;
+    }}
+    .event-row {{
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-bottom: 1px solid var(--divider);
+    }}
+    .event-row:last-child {{ border-bottom: none; }}
+    .event-time {{ font-size: 13px; color: var(--secondary-text); width: 38px; flex-shrink: 0; }}
+    .event-dot {{ width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }}
+    .event-desc {{ flex: 1; font-size: 14px; }}
+    .event-code {{ font-size: 11px; font-weight: 500; font-family: monospace; flex-shrink: 0; }}
+  </style>
+</head>
+<body>
+  <h1>Work History</h1>
+  {summary_html}
+  {timeline_html}
+</body>
+</html>"""
+        return HTMLResponse(content=html)
+
     # ── GeoJSON ──────────────────────────────────────────────────────
 
     @app.get("/api/map/geojson")

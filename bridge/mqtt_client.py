@@ -375,24 +375,21 @@ class YarboMQTTClient:
             elif topic == "SystemInfoFeedback":
                 self._status["system_info"] = payload
             elif topic == "get_connect_wifi_name":
-                # Robot reports its own WiFi connection info including IP
+                # Robot reports its own WiFi connection info.
+                # Note: the robot's WiFi IP (e.g. .105) differs from the
+                # data center/broker IP (e.g. .102) — this is expected.
+                # The broker runs on the data center (docking station),
+                # connected via ethernet. The robot connects over WiFi.
                 wifi_ip = payload.get("ip", "") if isinstance(payload, dict) else ""
                 self._status["wifi_info"] = payload
                 if wifi_ip:
                     self._status["robot_wifi_ip"] = wifi_ip
-                    log.info("Robot reports WiFi IP: %s (connected to '%s', signal %s)",
+                    log.info("Robot WiFi: IP=%s, SSID='%s', signal=%s "
+                             "(data center/broker at %s)",
                              wifi_ip,
                              payload.get("name", "?"),
-                             payload.get("signal", "?"))
-                    # Detect IP mismatch
-                    if wifi_ip != self.robot_ip:
-                        log.warning(
-                            "IP MISMATCH: connected to %s but robot reports %s — "
-                            "caching new IP for next reconnect",
-                            self.robot_ip, wifi_ip)
-                        save_cached_ip(wifi_ip)
-                    else:
-                        save_cached_ip(wifi_ip)
+                             payload.get("signal", "?"),
+                             self.robot_ip)
 
             # ── command responses ──
             elif topic == "get_map":

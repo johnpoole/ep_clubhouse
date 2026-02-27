@@ -30,7 +30,7 @@ class YarboAPI:
             self._tokens.access_token = None
             r = http_requests.get(url, headers=self._tokens.get_headers(), timeout=15)
         if r.status_code != 200:
-            raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            raise HTTPException(status_code=r.status_code, detail=r.text[:1000])
         data = r.json()
         if data.get("code") != "00000":
             raise HTTPException(status_code=502, detail=data.get("message", "API error"))
@@ -43,7 +43,7 @@ class YarboAPI:
             self._tokens.access_token = None
             r = http_requests.post(url, headers=self._tokens.get_headers(), json=body, timeout=15)
         if r.status_code != 200:
-            raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+            raise HTTPException(status_code=r.status_code, detail=r.text[:1000])
         data = r.json()
         if data.get("code") != "00000":
             raise HTTPException(status_code=502, detail=data.get("message", "API error"))
@@ -150,7 +150,7 @@ class YarboAPI:
     #         self._tokens.access_token = None
     #         r = http_requests.post(url, headers=self._tokens.get_headers(), json=body, timeout=15)
     #     if r.status_code != 200:
-    #         raise HTTPException(status_code=r.status_code, detail=r.text[:300])
+    #         raise HTTPException(status_code=r.status_code, detail=r.text[:1000])
     #     data = r.json()
     #     if data.get("code") != "00000":
     #         raise HTTPException(status_code=502,
